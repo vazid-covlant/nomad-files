@@ -23,26 +23,7 @@ jobs:
         scp -o StrictHostKeyChecking=no -i server-key.pem website.nomad.hcl ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com:~/website.nomad.hcl
         scp -r -o StrictHostKeyChecking=no -i server-key.pem my_nomad_packs ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com:~/
         scp -o StrictHostKeyChecking=no -i server-key.pem consul.hcl ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com:~/consul.hcl
-    - name: Install nomad
-      run: |
-        ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
-          if ! command -v nomad &> /dev/null
-          then
-            echo "Installing nomad dev cluster..."
-            sudo apt update
-            wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-            sudo apt update && sudo apt install -y nomad
-          else
-            echo "Nomad is already installed"
-          fi
-        EOF
-    - name: Running nomad cluster
-      run: |
-        ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
-          echo "Running nomad in dev mode"
-          nohup nomad agent -dev --config=$HOME/nomad.hcl > nomad.log 2>&1 &
-        EOF
+# Instal docker
     - name: Ensure Docker is installed
       run: |
         ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
@@ -69,20 +50,7 @@ jobs:
         ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
           sudo docker system prune -af
         EOF
-    - name: Install nomad pack
-      run: |
-        ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
-        if ! command nomad-pack &> /dev/null
-        then 
-          echo "Installing nomad pack..."
-          curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-          echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-          sudo apt update
-          sudo apt install -y nomad-pack
-        else
-          echo "Nomad-pack already installed"
-        fi
-        EOF
+# Instal Consul
     - name: Install consul
       run: |
         ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
@@ -97,11 +65,53 @@ jobs:
           echo "Consul already install"
         fi
         EOF
+# Run consul
     - name: Run consul in dev mode
       run: |
         ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
           nohup consul agent -dev --config=$HOME/consul.hcl > consul.log 2>&1 &
         EOF
+# Instal nomad
+    - name: Install nomad
+      run: |
+        ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
+          if ! command -v nomad &> /dev/null
+          then
+            echo "Installing nomad dev cluster..."
+            sudo apt update
+            wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+            sudo apt update && sudo apt install -y nomad
+          else
+            echo "Nomad is already installed"
+          fi
+        EOF
+# Run nomad with ACL setup
+    - name: Running nomad cluster
+      run: |
+        ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
+          echo "Running nomad in dev mode"
+          nohup nomad agent -dev --config=$HOME/nomad.hcl > nomad.log 2>&1 &
+          nomad acl bootstarp > bootstrap_token.txt
+          cat bootstrap_token.txt | grep 'Secret ID' | awk '{print \$3}' > nomad_token.txt
+          export NOMAD_TOKEN=\$(cat nomad_token.txt)
+          echo "NOMAD_TOKEN=\$NOMAD_TOKEN" >> ~/.bashrc
+        EOF
+    - name: Install nomad pack
+      run: |
+        ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
+        if ! command nomad-pack &> /dev/null
+        then 
+          echo "Installing nomad pack..."
+          curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+          sudo apt update
+          sudo apt install -y nomad-pack
+        else
+          echo "Nomad-pack already installed"
+        fi
+        EOF
+    
     - name: Open Firewall Ports
       run: |
         ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
