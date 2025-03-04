@@ -97,12 +97,19 @@ jobs:
           echo "Consul already install"
         fi
         EOF
-    - name: move consul.hcl
-      run: ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com 'sudo mv consul.hcl /etc/consul.d/'
     - name: Run consul in dev mode
       run: |
         ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
-          nohup consul agent -dev --config-dir=/etc/consul.d/ > consul.log 2>&1 &
+          nohup consul agent -dev --config=$HOME/consul.hcl > consul.log 2>&1 &
+        EOF
+    - name: Open Firewall Ports
+      run: |
+        ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
+          sudo ufw allow 8500/tcp  # Consul UI
+          sudo ufw allow 4646/tcp  # Nomad UI
+          sudo ufw allow 4647/tcp  # Nomad RPC
+          sudo ufw allow 4648/tcp  # Nomad serf
+          sudo ufw enable
         EOF
     - name: Run nomad pack
       run: |
@@ -113,4 +120,6 @@ jobs:
           nomad-pack run .
           nomad-pack list
         EOF
+    
+
     
