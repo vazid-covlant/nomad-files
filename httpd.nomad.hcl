@@ -12,6 +12,10 @@ job "httpd" {
         args    = ["-f", "-p", "${NOMAD_PORT_http}"]
         ports   = ["http"]
       }
+      resources {
+                cpu = 80
+                memory = 20
+            }
     }
   }
 }

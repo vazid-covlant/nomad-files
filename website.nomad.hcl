@@ -15,8 +15,8 @@ job "website"{
                 ports = ["http"]
             }
             resources {
-                cpu = 120
-                memory = 50
+                cpu = 80
+                memory = 20
             }
         }
     }
