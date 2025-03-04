@@ -93,6 +93,11 @@ jobs:
           echo "Running nomad in dev mode"
           nohup nomad agent -dev --config=$HOME/nomad.hcl > nomad.log 2>&1 &
           sleep 2
+          BOOTSTRAP_OUTPUT=$(nomad acl bootstrap)
+          echo "$BOOTSTRAP_OUTPUT" > bootstrap_token.txt
+          grep 'Secret ID' bootstrap_token.txt | awk '{print $3}' > nomad_token.txt
+          export NOMAD_TOKEN=$(cat nomad_token.txt)
+          echo "NOMAD_TOKEN=$NOMAD_TOKEN" >> ~/.bashrc
         EOF
 
     - name: Install nomad pack
