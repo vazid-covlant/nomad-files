@@ -102,7 +102,7 @@ jobs:
     - name: Run consul in dev mode
       run: |
         ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
-          nohup consul agent -dev --config=$HOME/consul.hcl > consul.log 2>&1 &
+          nohup consul agent -dev --config-dir=/etc/consul.d/ > consul.log 2>&1 &
         EOF
     - name: Run nomad pack
       run: |
