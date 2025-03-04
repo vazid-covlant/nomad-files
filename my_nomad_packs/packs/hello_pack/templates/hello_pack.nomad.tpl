@@ -7,7 +7,7 @@ job "hello_pack" {
 
     network {
       port "http" {
-        static = 80
+        to = 80
       }
     }
 
@@ -17,7 +17,6 @@ job "hello_pack" {
       driver = "docker"
       config {
         image        = "mnomitch/hello_world_server"
-        network_mode = "host"
         ports        = ["http"]
       }
 
