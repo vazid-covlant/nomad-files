@@ -67,7 +67,7 @@ jobs:
     - name: Run consul in dev mode
       run: |
         ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
-          nohup consul agent -dev --config=$HOME/consul.hcl > consul.log 2>&1 &
+          nohup consul agent -dev --config=consul.hcl > consul.log 2>&1 &
         EOF
 # Instal nomad
     - name: Install nomad
@@ -89,13 +89,14 @@ jobs:
       run: |
         ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
           echo "Running nomad in dev mode"
-          nohup nomad agent -dev --config=$HOME/nomad.hcl > nomad.log 2>&1 &
+          nohup nomad agent -dev --config=nomad.hcl > nomad.log 2>&1 &
           sleep 2
           BOOTSTRAP_OUTPUT=$(nomad acl bootstrap)
           echo "$BOOTSTRAP_OUTPUT" > bootstrap_token.txt
           grep 'Secret ID' bootstrap_token.txt | awk '{print $4}' > nomad_token.txt
           export NOMAD_TOKEN=$(cat nomad_token.txt)
           echo "NOMAD_TOKEN=$NOMAD_TOKEN" >> ~/.bashrc
+          source ~/.bashrc
         EOF
     - name: Create ACL policy
       run: |
@@ -109,6 +110,15 @@ jobs:
           export NOMAD_TOKEN=$(cat nomad_token.txt)
           nomad acl token create -name="readonly-user" -policy="readonly" > readonly_token.txt
         EOF
+    - name: Fetch ACL Token from EC2
+      run: |
+        scp -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com:~/nomad_token.txt .
+        if [ -s nomad_token.txt ]; then
+          echo "Nomad token found, uploading..."
+        else
+          echo "Error: nomad_token.txt is empty or missing!" >&2
+          exit 1
+        fi
     - name: Upload ACL token for next workflow
       uses: actions/upload-artifact@v4
       with:
