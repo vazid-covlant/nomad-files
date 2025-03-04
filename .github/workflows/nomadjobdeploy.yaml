@@ -95,6 +95,8 @@ jobs:
           sudo apt install -y consul
         else
           echo "Consul already install"
+        fi
+        EOF
     - name: Run consul in dev mode
       run: |
         ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
