@@ -40,7 +40,7 @@ jobs:
       run: |
         ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
           echo "Running nomad in dev mode"
-          nohup nomad agent -dev -bind=0.0.0.0 --config=$HOME/nomad.hcl > nomad.log 2>&1 &
+          nohup nomad agent -dev --config=$HOME/nomad.hcl > nomad.log 2>&1 &
         EOF
     - name: Ensure Docker is installed
       run: |
