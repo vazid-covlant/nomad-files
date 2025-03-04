@@ -23,6 +23,7 @@ jobs:
         scp -o StrictHostKeyChecking=no -i server-key.pem website.nomad.hcl ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com:~/website.nomad.hcl
         scp -r -o StrictHostKeyChecking=no -i server-key.pem my_nomad_packs ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com:~/
         scp -o StrictHostKeyChecking=no -i server-key.pem consul.hcl ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com:~/consul.hcl
+        scp -o StrictHostKeyChecking=no -i server-key.pem readonly.hcl ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com:~/readonly.hcl
 # Instal docker
     - name: Ensure Docker is installed
       run: |
