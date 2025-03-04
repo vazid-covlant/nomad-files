@@ -19,4 +19,7 @@ addresses {
 
 acl {
   enabled = true
+  tokens {
+    initial_management = "nomad-root-token"
+  }
 }
