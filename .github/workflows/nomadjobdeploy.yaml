@@ -22,7 +22,8 @@ jobs:
         scp -o StrictHostKeyChecking=no -i server-key.pem httpd.nomad.hcl ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com:~/httpd.nomad.hcl
         scp -o StrictHostKeyChecking=no -i server-key.pem website.nomad.hcl ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com:~/website.nomad.hcl
         scp -r -o StrictHostKeyChecking=no -i server-key.pem my_nomad_packs ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com:~/
-    - name: Check nomad installed
+
+    - name: Install nomad
       run: |
         ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
           if ! command -v nomad &> /dev/null
@@ -36,7 +37,7 @@ jobs:
             echo "Nomad is already installed"
           fi
         EOF
-    - name: running nomad cluster
+    - name: Running nomad cluster
       run: |
         ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
           echo "Running nomad in dev mode"
@@ -81,6 +82,22 @@ jobs:
         else
           echo "Nomad-pack already installed"
         fi
+        EOF
+    - name: Install consul
+      run: |
+        ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
+        if ! command consul &> /dev/null
+        then
+          echo "Install consul"
+          wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+          sudo apt update && sudo apt install consul
+        else
+          echo "Consul already install"
+    - name: Run consul in dev mode
+      run: |
+        ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
+          nohup consul agent -dev > consul.log 2>&1 &
         EOF
     - name: Run nomad pack
       run: |
