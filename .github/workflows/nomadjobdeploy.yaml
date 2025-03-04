@@ -95,7 +95,7 @@ jobs:
           sleep 2
           BOOTSTRAP_OUTPUT=$(nomad acl bootstrap)
           echo "$BOOTSTRAP_OUTPUT" > bootstrap_token.txt
-          grep 'Secret ID' bootstrap_token.txt | awk '{print $3}' > nomad_token.txt
+          grep 'Secret ID' bootstrap_token.txt | awk '{print $4}' > nomad_token.txt
           export NOMAD_TOKEN=$(cat nomad_token.txt)
           echo "NOMAD_TOKEN=$NOMAD_TOKEN" >> ~/.bashrc
         EOF
