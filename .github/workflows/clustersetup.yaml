@@ -110,7 +110,7 @@ jobs:
           nomad acl token create -name="readonly-user" -policy="readonly" > readonly_token.txt
         EOF
     - name: Upload ACL token for next workflow
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: nomad-token
         path: nomad_token.txt
