@@ -92,7 +92,8 @@ jobs:
         ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
           echo "Running nomad in dev mode"
           nohup nomad agent -dev --config=$HOME/nomad.hcl > nomad.log 2>&1 &
-          nomad acl bootstarp > bootstrap_token.txt
+          BOOTSTRAP_OUTPUT=\$(nomad acl bootstrap)
+          echo "\$BOOTSTRAP_OUTPUT" > bootstrap_token.txt
           cat bootstrap_token.txt | grep 'Secret ID' | awk '{print \$3}' > nomad_token.txt
           export NOMAD_TOKEN=\$(cat nomad_token.txt)
           echo "NOMAD_TOKEN=\$NOMAD_TOKEN" >> ~/.bashrc
