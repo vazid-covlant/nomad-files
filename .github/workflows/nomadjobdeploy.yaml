@@ -40,7 +40,7 @@ jobs:
       run: |
         ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
           echo "Running nomad in dev mode"
-          nohup nomad agent -dev --config=$HOME/nomad.hcl > nomad.log 2>&1 &
+          nohup nomad agent -dev -bind=0.0.0.0 --config=$HOME/nomad.hcl > nomad.log 2>&1 &
         EOF
     - name: Ensure Docker is installed
       run: |
@@ -58,21 +58,15 @@ jobs:
             echo "Docker is already installed."
           fi
         EOF
-    - name: Clean up Docker system
-      run: |
-        ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
-          sudo docker system prune -af
-        EOF
     - name: Login to Docker Hub
       uses: docker/login-action@v3
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
-    - name: Running nomad job
+    - name: Clean up Docker system
       run: |
         ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
-          nomad job run ~/httpd.nomad.hcl
-          nomad job run ~/website.nomad.hcl
+          sudo docker system prune -af
         EOF
     - name: Install nomad pack
       run: |
@@ -87,12 +81,6 @@ jobs:
         else
           echo "Nomad-pack already installed"
         fi
-        EOF
-    - name: Kill nomad jobs
-      run: |
-        ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
-          nomad job stop -purge httpd
-          nomad job stop -purge website
         EOF
     - name: Run nomad pack
       run: |
