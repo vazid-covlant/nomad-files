@@ -99,7 +99,19 @@ jobs:
           export NOMAD_TOKEN=$(cat nomad_token.txt)
           echo "NOMAD_TOKEN=$NOMAD_TOKEN" >> ~/.bashrc
         EOF
-
+    - name: Create ACL policy
+      run: |
+        ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
+          export NOMAD_TOKEN=\$(cat nomad_token.txt)
+          nomad acl policy apply readonly readonly.hcl
+        EOF
+    - name: Create Read-Only Token
+      run: |
+        ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
+          export NOMAD_TOKEN=\$(cat nomad_token.txt)
+          nomad acl token create -name="readonly-user" -policy="readonly" > readonly_token.txt
+        EOF
+# Install nomad pack
     - name: Install nomad pack
       run: |
         ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
@@ -114,7 +126,7 @@ jobs:
           echo "Nomad-pack already installed"
         fi
         EOF
-    
+# open firewall port for UI access
     - name: Open Firewall Ports
       run: |
         ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
@@ -124,10 +136,12 @@ jobs:
           sudo ufw allow 4648/tcp  # Nomad serf
           sudo ufw enable
         EOF
+# running nomad pack
     - name: Run nomad pack
       run: |
         ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
           cd ~/my_nomad_packs/packs/hello_pack
+          export NOMAD_TOKEN=\$(cat nomad_token.txt)
           nomad-pack info .
           nomad-pack render .
           nomad-pack run .
