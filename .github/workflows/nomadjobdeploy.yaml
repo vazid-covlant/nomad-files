@@ -102,13 +102,13 @@ jobs:
     - name: Create ACL policy
       run: |
         ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
-          export NOMAD_TOKEN=\$(cat nomad_token.txt)
+          export NOMAD_TOKEN=$(cat nomad_token.txt)
           nomad acl policy apply readonly readonly.hcl
         EOF
     - name: Create Read-Only Token
       run: |
         ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
-          export NOMAD_TOKEN=\$(cat nomad_token.txt)
+          export NOMAD_TOKEN=$(cat nomad_token.txt)
           nomad acl token create -name="readonly-user" -policy="readonly" > readonly_token.txt
         EOF
 # Install nomad pack
@@ -141,7 +141,7 @@ jobs:
       run: |
         ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
           cd ~/my_nomad_packs/packs/hello_pack
-          export NOMAD_TOKEN=\$(cat nomad_token.txt)
+          export NOMAD_TOKEN=$(cat nomad_token.txt)
           nomad-pack info .
           nomad-pack render .
           nomad-pack run .
