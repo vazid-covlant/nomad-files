@@ -88,6 +88,12 @@ jobs:
           echo "Nomad-pack already installed"
         fi
         EOF
+    - name: Kill nomad jobs
+      run: |
+        ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
+          nomad job stop -purge httpd
+          nomad job stop -purge website
+        EOF
     - name: Run nomad pack
       run: |
         ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
@@ -97,3 +103,4 @@ jobs:
           nomad-pack run .
           nomad-pack list
         EOF
+    
