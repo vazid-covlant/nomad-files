@@ -7,7 +7,7 @@ env:
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
   DOCKERHUB_TOKEN:  ${{ secrets.DOCKERHUB_TOKEN }}
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -16,31 +16,6 @@ jobs:
       run: |  
         echo "${{ secrets.AWS_PRIVATE_KEY }}" | tr -d '\r' > server-key.pem
         chmod 600 server-key.pem
-    - name: Copy files
-      run: |
-        scp -o StrictHostKeyChecking=no -i server-key.pem nomad.hcl ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com:~/nomad.hcl
-        scp -o StrictHostKeyChecking=no -i server-key.pem httpd.nomad.hcl ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com:~/httpd.nomad.hcl
-        scp -o StrictHostKeyChecking=no -i server-key.pem website.nomad.hcl ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com:~/website.nomad.hcl
-        scp -r -o StrictHostKeyChecking=no -i server-key.pem my_nomad_packs ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com:~/
-        scp -o StrictHostKeyChecking=no -i server-key.pem consul.hcl ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com:~/consul.hcl
-        scp -o StrictHostKeyChecking=no -i server-key.pem readonly.hcl ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com:~/readonly.hcl
-# Instal docker
-    - name: Ensure Docker is installed
-      run: |
-        ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
-          if ! command -v docker &> /dev/null
-          then
-            echo "Installing Docker..."
-            sudo apt update
-            sudo apt install -y docker.io
-            sudo systemctl enable docker
-            sudo systemctl start docker
-            sudo usermod -aG docker ubuntu
-            newgrp docker
-          else
-            echo "Docker is already installed."
-          fi
-        EOF
     - name: Login to Docker Hub
       uses: docker/login-action@v3
       with:
@@ -50,92 +25,6 @@ jobs:
       run: |
         ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
           sudo docker system prune -af
-        EOF
-# Instal Consul
-    - name: Install consul
-      run: |
-        ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
-        if ! command consul &> /dev/null
-        then
-          echo "Install consul"
-          wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-          sudo apt update
-          sudo apt install -y consul
-        else
-          echo "Consul already install"
-        fi
-        EOF
-# Run consul
-    - name: Run consul in dev mode
-      run: |
-        ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
-          nohup consul agent -dev --config=$HOME/consul.hcl > consul.log 2>&1 &
-        EOF
-# Instal nomad
-    - name: Install nomad
-      run: |
-        ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
-          if ! command -v nomad &> /dev/null
-          then
-            echo "Installing nomad dev cluster..."
-            sudo apt update
-            wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-            sudo apt update && sudo apt install -y nomad
-          else
-            echo "Nomad is already installed"
-          fi
-        EOF
-# Run nomad with ACL setup
-    - name: Running nomad cluster
-      run: |
-        ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
-          echo "Running nomad in dev mode"
-          nohup nomad agent -dev --config=$HOME/nomad.hcl > nomad.log 2>&1 &
-          sleep 2
-          BOOTSTRAP_OUTPUT=$(nomad acl bootstrap)
-          echo "$BOOTSTRAP_OUTPUT" > bootstrap_token.txt
-          grep 'Secret ID' bootstrap_token.txt | awk '{print $4}' > nomad_token.txt
-          export NOMAD_TOKEN=$(cat nomad_token.txt)
-          echo "NOMAD_TOKEN=$NOMAD_TOKEN" >> ~/.bashrc
-        EOF
-    - name: Create ACL policy
-      run: |
-        ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
-          export NOMAD_TOKEN=$(cat nomad_token.txt)
-          nomad acl policy apply readonly readonly.hcl
-        EOF
-    - name: Create Read-Only Token
-      run: |
-        ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
-          export NOMAD_TOKEN=$(cat nomad_token.txt)
-          nomad acl token create -name="readonly-user" -policy="readonly" > readonly_token.txt
-        EOF
-# Install nomad pack
-    - name: Install nomad pack
-      run: |
-        ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
-        if ! command nomad-pack &> /dev/null
-        then 
-          echo "Installing nomad pack..."
-          curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-          echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-          sudo apt update
-          sudo apt install -y nomad-pack
-        else
-          echo "Nomad-pack already installed"
-        fi
-        EOF
-# open firewall port for UI access
-    - name: Open Firewall Ports
-      run: |
-        ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com << 'EOF'
-          sudo ufw allow 8500/tcp  # Consul UI
-          sudo ufw allow 4646/tcp  # Nomad UI
-          sudo ufw allow 4647/tcp  # Nomad RPC
-          sudo ufw allow 4648/tcp  # Nomad serf
-          sudo ufw enable
         EOF
 # running nomad pack
     - name: Run nomad pack
