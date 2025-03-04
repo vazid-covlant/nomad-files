@@ -13,4 +13,3 @@ agent {
 operator {
   policy = "read"
 }
-'

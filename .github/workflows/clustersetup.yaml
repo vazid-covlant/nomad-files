@@ -1,8 +1,9 @@
-name: Build docker image and deploy to docker hub
+name: Cluster setup
 on:
   push:
     branches:
       - main
+  workflow_dispatch:
 env:
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
   DOCKERHUB_TOKEN:  ${{ secrets.DOCKERHUB_TOKEN }}
@@ -18,12 +19,8 @@ jobs:
         chmod 600 server-key.pem
     - name: Copy files
       run: |
-        scp -o StrictHostKeyChecking=no -i server-key.pem nomad.hcl ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com:~/nomad.hcl
-        scp -o StrictHostKeyChecking=no -i server-key.pem httpd.nomad.hcl ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com:~/httpd.nomad.hcl
-        scp -o StrictHostKeyChecking=no -i server-key.pem website.nomad.hcl ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com:~/website.nomad.hcl
+        scp -o StrictHostKeyChecking=no -i server-key.pem consul.hcl nomad.hcl readonly.hcl ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com:~/
         scp -r -o StrictHostKeyChecking=no -i server-key.pem my_nomad_packs ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com:~/
-        scp -o StrictHostKeyChecking=no -i server-key.pem consul.hcl ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com:~/consul.hcl
-        scp -o StrictHostKeyChecking=no -i server-key.pem readonly.hcl ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com:~/readonly.hcl
 # Instal docker
     - name: Ensure Docker is installed
       run: |
@@ -112,6 +109,11 @@ jobs:
           export NOMAD_TOKEN=$(cat nomad_token.txt)
           nomad acl token create -name="readonly-user" -policy="readonly" > readonly_token.txt
         EOF
+    - name: Upload ACL token for next workflow
+      uses: actions/upload-artifact@v3
+      with:
+        name: nomad-token
+        path: nomad_token.txt
 # Install nomad pack
     - name: Install nomad pack
       run: |

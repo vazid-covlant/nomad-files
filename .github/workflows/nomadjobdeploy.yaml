@@ -1,8 +1,9 @@
-name: Build docker image and deploy to docker hub
+name: Nomad Job Deployment
 on:
-  push:
-    branches:
-      - main
+  workflows_run:
+    workflows: ["Cluster Setup"]
+    types:
+      - completed
 env:
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
   DOCKERHUB_TOKEN:  ${{ secrets.DOCKERHUB_TOKEN }}
@@ -12,10 +13,17 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
+    - name: Download ACL Token
+      uses: actions/download-artifact@v3
+      with:
+        name: nomad-token
     - name: Set permission for private key
       run: |  
         echo "${{ secrets.AWS_PRIVATE_KEY }}" | tr -d '\r' > server-key.pem
         chmod 600 server-key.pem
+    - name: Copy files
+      run: |
+        scp -r -o StrictHostKeyChecking=no -i server-key.pem my_nomad_packs ubuntu@ec2-3-85-91-213.compute-1.amazonaws.com:~/
     - name: Login to Docker Hub
       uses: docker/login-action@v3
       with:
