@@ -3,7 +3,7 @@ job "hello_pack" {
   [[ template "region" . ]]
   datacenters = [[ var "datacenters" . | toStringList ]]
   group "app" {
-    count = [[ var "count" . ]]
+    count = [[ var "app_count" . ]]
 
     network {
       port "http" {
