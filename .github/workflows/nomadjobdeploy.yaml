@@ -1,6 +1,6 @@
 name: Nomad Job Deployment
 on:
-  workflows_run:
+  workflow_run:
     workflows: ["Cluster Setup"]
     types:
       - completed
