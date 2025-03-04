@@ -97,6 +97,7 @@ jobs:
           export NOMAD_TOKEN=$(cat nomad_token.txt)
           echo "NOMAD_TOKEN=$NOMAD_TOKEN" >> ~/.bashrc
           source ~/.bashrc
+          echo $NOMAD_TOKEN
         EOF
     - name: Create ACL policy
       run: |
