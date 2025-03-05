@@ -16,3 +16,6 @@ addresses {
   rpc  = "0.0.0.0"
   serf = "0.0.0.0"
 }
+acl {
+  enabled = false
+}
