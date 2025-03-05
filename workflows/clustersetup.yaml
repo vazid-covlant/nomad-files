@@ -1,4 +1,4 @@
-name: Cluster setup without ACL
+name: Cluster setup with ACL
 on:
   push:
     branches:
@@ -84,14 +84,49 @@ jobs:
             echo "Nomad is already installed"
           fi
         EOF
-# Run nomad 
+# Run nomad with ACL setup
     - name: Running nomad cluster
       run: |
         ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-44-208-26-135.compute-1.amazonaws.com << 'EOF'
           echo "Running nomad in dev mode"
           nohup nomad agent -dev --config=nomad.hcl > nomad.log 2>&1 &
+          sleep 2
+          BOOTSTRAP_OUTPUT=$(nomad acl bootstrap)
+          echo "$BOOTSTRAP_OUTPUT" > bootstrap_token.txt
+          grep 'Secret ID' bootstrap_token.txt | awk '{print $4}' > nomad_token.txt
+          export NOMAD_TOKEN=$(cat nomad_token.txt)
           nomad node status
+          echo "export NOMAD_TOKEN=$(cat nomad_token.txt)" >> ~/.bashrc
+          source ~/.bashrc
+          nomad node status
+          echo $NOMAD_TOKEN
         EOF
+    - name: Create ACL policy
+      run: |
+        ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-44-208-26-135.compute-1.amazonaws.com << 'EOF'
+          export NOMAD_TOKEN=$(cat nomad_token.txt)
+          nomad acl policy apply readonly readonly.hcl
+        EOF
+    - name: Create Read-Only Token
+      run: |
+        ssh -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-44-208-26-135.compute-1.amazonaws.com << 'EOF'
+          export NOMAD_TOKEN=$(cat nomad_token.txt)
+          nomad acl token create -name="readonly-user" -policy="readonly" > readonly_token.txt
+        EOF
+    - name: Fetch ACL Token from EC2
+      run: |
+        scp -o StrictHostKeyChecking=no -i server-key.pem ubuntu@ec2-44-208-26-135.compute-1.amazonaws.com:~/nomad_token.txt .
+        if [ -s nomad_token.txt ]; then
+          echo "Nomad token found, uploading..."
+        else
+          echo "Error: nomad_token.txt is empty or missing!" >&2
+          exit 1
+        fi
+    - name: Upload ACL token for next workflow
+      uses: actions/upload-artifact@v4
+      with:
+        name: nomad-token
+        path: nomad_token.txt
 # Install nomad pack
     - name: Install nomad pack
       run: |
